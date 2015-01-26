@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main.Model(
 	TodoList(..)
 	, TodoItem(..)
@@ -11,62 +13,61 @@ import Control.Applicative ((<$>),(<*>))
 import Control.Monad (mzero)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe
+import Control.Monad.State.Lazy
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Text (Text,unpack)
 import qualified System.IO as S
 
-newtype TodoList = TodoList { list :: [TodoItem] }
-
-instance Show TodoList where
-	show tdl = foldl (\ acc x -> acc ++ '\n':(show x)) "" (list tdl)
+type TodoList = [TodoItem]
 
 data TodoItem = TodoItem { 
-	date :: T.Text
-	, message :: T.Text
+	date :: Text
+	, message :: Text
 	}
 
 instance FromJSON TodoItem where
 	parseJSON (Object v) = TodoItem <$>
-		v .: (T.pack "date") <*>
-		v .: (T.pack "message")
+		v .: "date" <*>
+		v .: "message"
 	parseJSON _ = mzero
 
 instance ToJSON TodoItem where
-	toJSON (TodoItem date message) = object [(T.pack "date") .= date,
-						(T.pack "message") .= message]
+	toJSON (TodoItem date message) = object ["date" .= date,
+						"message" .= message]
 
 instance Show TodoItem where
-	show (TodoItem d m) = "Date: " ++ T.unpack d 
-		++ "\t\t\tMessage: " ++ T.unpack m
+	show (TodoItem d m) = "Date: " ++ unpack d 
+		++ "\t\t\tMessage: " ++ unpack m
 
-loadList :: T.Text -> TodoList -> MaybeT IO TodoList 
-loadList fp _ = (lift . B.readFile . T.unpack) fp >>= dec
-	where dec bs = case (decode bs :: Maybe [TodoItem]) of
-		Just ls -> return $ TodoList ls
+loadList :: Text -> StateT TodoList IO ()
+loadList fp = StateT load
+	where load = \xs -> do
+		contents <- B.readFile . unpack $ fp
+		case (decode contents :: Maybe TodoList) of
+			Just list -> return ((),list)
+			Nothing -> S.putStrLn "Syntax Error in JSON file" >> return ((),[])
+
+saveList :: Text -> StateT TodoList IO ()
+saveList fp = StateT save
+	where save = \xs -> do
+		B.writeFile (unpack fp) (encode xs)
+		return ((),xs)
+
+addItem :: TodoItem -> StateT TodoList IO ()
+addItem x = modify (x:)
+
+removeItem :: Maybe Int -> StateT TodoList IO ()
+removeItem mn = StateT remove
+	where remove = \xs -> case mn of
+		Just n -> if n <= length xs - 1 
+			then return ((),removeAt n xs)
+			else do
+				S.putStrLn "Index too large"
+				return ((),xs)
 		Nothing -> do
-			lift $ S.putStrLn "Invalid json file"
-			return $ TodoList []
-
-saveList :: T.Text -> TodoList -> MaybeT IO TodoList 
-saveList fp tdl = do
-		lift $ B.writeFile (T.unpack fp) ((encode . list) tdl)
-		return tdl
-
-addItem :: TodoItem -> TodoList -> MaybeT IO TodoList
-addItem tdi tdl = return . TodoList $ tdi:(list tdl)
-
-removeItem :: Maybe Int -> TodoList -> MaybeT IO TodoList
-removeItem Nothing tdl = do
-		lift $ S.putStrLn "Invalid index (integer was not entered)"
-		return tdl
-removeItem (Just n) tdl = if n <= ((length . list) tdl) - 1 
-		then return . TodoList $ removeAt n $ list tdl
-		else do
-			lift $ S.putStrLn "Invalid index (too large)"
-			return tdl
-
+			S.putStrLn "Invalid index entered"
+			return ((),xs)
 
 removeAt :: Int -> [a] -> [a]
 removeAt _ [] = []

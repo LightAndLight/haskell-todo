@@ -1,41 +1,41 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main.Controller(requestChoice,parseChoice) where
 
 import Main.Model
 import Prelude hiding (getLine,putStrLn)
-import Control.Monad.Trans
-import Control.Monad.Trans.Maybe
-import Data.Text (Text,split,toLower,append,pack)
+import Control.Monad.State.Lazy
+import Data.Text (Text,split,toLower,append)
 import Data.Text.IO (getLine,putStrLn)
 import Data.Text.Read (decimal)
 import System.Exit
 
-requestChoice :: IO Text
-requestChoice = do
-	putStrLn (pack "Enter command")
-	getLine
+requestChoice :: StateT TodoList IO Text
+requestChoice = StateT $ \xs -> do 
+	putStrLn ("Enter command") 
+	line <- getLine
+	return (line,xs)
 
-empty :: Text
-empty = pack ""
-
-parseChoice :: Text -> TodoList -> MaybeT IO TodoList
-parseChoice xs tdl
-	| first == pack "add" = addItem (TodoItem second third) tdl
-	| first == pack "remove" = removeItem (parseInt second) tdl
-	| first == pack "save" = saveList second tdl
-	| first == pack "load" = loadList second tdl
-	| first == pack "quit" = lift $ exitSuccess
-	| otherwise = invalidChoice first tdl
-	where	args =  split (=='|') (toLower xs)
+parseChoice :: Text -> StateT TodoList IO ()
+parseChoice choice
+	| first == "add" = addItem $ TodoItem second third
+	| first == "remove" = removeItem $ parseInt second
+	| first == "save" = saveList second
+	| first == "load" = loadList second
+	| first == "quit" = StateT $ \_ -> exitSuccess
+	| otherwise = invalidChoice first
+	where	args =  split (=='|') (toLower choice)
 		first = head args
-		second = if length args > 1 then args !! 1 else empty
-		third = if length args > 2 then args !! 2 else empty
+		second = if length args > 1 then args !! 1 else ""
+		third = if length args > 2 then args !! 2 else ""
 
-invalidChoice :: Text -> TodoList -> MaybeT IO TodoList
-invalidChoice cmd tdl = do
-	lift $ putStrLn $ append cmd $ pack " is an invalid command."
-	return tdl
+invalidChoice :: Text -> StateT TodoList IO ()
+invalidChoice cmd = StateT invalid 
+	where invalid = \xs -> do
+		putStrLn $ append cmd " is an invalid command."
+		return ((),xs)
 
 parseInt :: Text -> Maybe Int
 parseInt tx = case decimal tx of
 	Left _ -> Nothing
-	Right (n,xs) -> if xs == empty then Just n else Nothing
+	Right (n,xs) -> if xs == "" then Just n else Nothing

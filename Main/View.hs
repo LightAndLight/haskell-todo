@@ -1,11 +1,8 @@
 module Main.View(printList) where
 
 import Main.Model
-import Control.Monad.Trans
-import Control.Monad.Trans.Maybe
+import Control.Monad.State.Lazy
 import System.IO
 
-printList :: TodoList -> MaybeT IO TodoList
-printList tdl = do
-	lift . putStrLn . show $ tdl
-	return tdl 
+printList :: StateT TodoList IO ()
+printList = StateT $ \xs -> mapM_ (putStrLn . show) xs >> return ((),xs)
