@@ -58,16 +58,8 @@ addItem :: TodoItem -> StateT TodoList IO ()
 addItem x = modify (x:)
 
 removeItem :: Maybe Int -> StateT TodoList IO ()
-removeItem mn = StateT remove
-	where remove = \xs -> case mn of
-		Just n -> if n <= length xs - 1 
-			then return ((),removeAt n xs)
-			else do
-				S.putStrLn "Index too large"
-				return ((),xs)
-		Nothing -> do
-			S.putStrLn "Invalid index entered"
-			return ((),xs)
+removeItem Nothing  = lift $ putStrLn "Invalid index entered"
+removeItem (Just n) = modify (removeAt n)
 
 removeAt :: Int -> [a] -> [a]
 removeAt _ [] = []

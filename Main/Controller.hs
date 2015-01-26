@@ -17,17 +17,14 @@ requestChoice = StateT $ \xs -> do
 	return (line,xs)
 
 parseChoice :: Text -> StateT TodoList IO ()
-parseChoice choice
-	| first == "add" = addItem $ TodoItem second third
-	| first == "remove" = removeItem $ parseInt second
-	| first == "save" = saveList second
-	| first == "load" = loadList second
-	| first == "quit" = StateT $ \_ -> exitSuccess
-	| otherwise = invalidChoice first
-	where	args =  split (=='|') (toLower choice)
-		first = head args
-		second = if length args > 1 then args !! 1 else ""
-		third = if length args > 2 then args !! 2 else ""
+parseChoice choice =
+    case split (== '|') (toLower choice) of
+        ["add", date, message] -> addItem $ TodoItem date message
+        ["remove", index]      -> removeItem $ parseInt index
+        ["save", file]         -> saveList file
+        ["load", file]         -> loadList file
+        ["quit"]               -> lift exitSuccess
+        (invalid:_)            -> invalidChoice invalid
 
 invalidChoice :: Text -> StateT TodoList IO ()
 invalidChoice cmd = StateT invalid 
