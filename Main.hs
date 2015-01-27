@@ -8,10 +8,9 @@ import Control.Monad.State
 
 program :: StateT TodoList IO ()
 program = do
-	StateT $ \xs -> do
-		(choice,_) <- runStateT requestChoice xs
-		(_,xs') <- runStateT (parseChoice choice) xs
-		runStateT printList xs'
-		runStateT program xs'
+    choice <- requestChoice
+    parseChoice choice
+    printList
+    program
 
 main = runStateT program []

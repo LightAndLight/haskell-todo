@@ -49,3 +49,6 @@ Temporary Items
 
 #vim swap files
 *~
+
+# Haskell build artifacts
+dist/
