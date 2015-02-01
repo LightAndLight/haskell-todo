@@ -10,13 +10,13 @@ import Data.Text.IO (getLine,putStrLn)
 import Data.Text.Read (decimal)
 import System.Exit
 
-requestChoice :: StateT TodoList IO Text
+requestChoice :: StateT (ProgramData Bool TodoList) IO Text
 requestChoice = StateT $ \xs -> do 
 	putStrLn ("Enter command") 
 	line <- getLine
 	return (line,xs)
 
-parseChoice :: Text -> StateT TodoList IO ()
+parseChoice :: Text -> ProgramState
 parseChoice choice =
     case split (== '|') (toLower choice) of
         ["add", date, message] -> addItem $ TodoItem date message
@@ -26,11 +26,11 @@ parseChoice choice =
         ["quit"]               -> lift exitSuccess
         (invalid:_)            -> invalidChoice invalid
 
-invalidChoice :: Text -> StateT TodoList IO ()
+invalidChoice :: Text -> ProgramState
 invalidChoice cmd = StateT invalid 
-	where invalid = \xs -> do
+	where invalid = \ps -> do
 		putStrLn $ append cmd " is an invalid command."
-		return ((),xs)
+		return ((),ps)
 
 parseInt :: Text -> Maybe Int
 parseInt tx = case decimal tx of

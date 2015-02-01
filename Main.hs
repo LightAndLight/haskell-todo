@@ -6,11 +6,13 @@ import Main.Controller
 
 import Control.Monad.State
 
-program :: StateT TodoList IO ()
+program :: ProgramState
 program = do
     choice <- requestChoice
     parseChoice choice
     printList
     program
 
-main = runStateT program []
+
+
+main = runStateT program $ ProgramData False []

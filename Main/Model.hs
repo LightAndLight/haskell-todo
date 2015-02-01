@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main.Model(
-	TodoList(..)
+    ProgramData(..)
+    , ProgramState(..)
+	, TodoList(..)
 	, TodoItem(..)
 	, loadList
 	, saveList
@@ -26,6 +28,13 @@ data TodoItem = TodoItem {
 	, message :: Text
 	}
 
+data ProgramData b l = ProgramData {
+    saved :: Bool
+    , list :: TodoList
+    }
+
+type ProgramState = StateT (ProgramData Bool TodoList) IO ()
+
 instance FromJSON TodoItem where
 	parseJSON (Object v) = TodoItem <$>
 		v .: "date" <*>
@@ -40,26 +49,24 @@ instance Show TodoItem where
 	show (TodoItem d m) = "Date: " ++ unpack d 
 		++ "\t\t\tMessage: " ++ unpack m
 
-loadList :: Text -> StateT TodoList IO ()
-loadList fp = StateT load
-	where load = \xs -> do
+loadList :: Text -> ProgramState
+loadList fp = StateT $ \ps -> do
 		contents <- B.readFile . unpack $ fp
 		case (decode contents :: Maybe TodoList) of
-			Just list -> return ((),list)
-			Nothing -> S.putStrLn "Syntax Error in JSON file" >> return ((),[])
+			Just list -> return ((),ProgramData False list)
+			Nothing -> S.putStrLn "Syntax Error in JSON file" >> return ((),ps)
 
-saveList :: Text -> StateT TodoList IO ()
-saveList fp = StateT save
-	where save = \xs -> do
-		B.writeFile (unpack fp) (encode xs)
-		return ((),xs)
+saveList :: Text -> ProgramState
+saveList fp = StateT $ \(ProgramData _ l) -> do
+		B.writeFile (unpack fp) . encode $ l
+		return ((),ProgramData True l)
 
-addItem :: TodoItem -> StateT TodoList IO ()
-addItem x = modify (x:)
+addItem :: TodoItem -> ProgramState
+addItem x = StateT $ \(ProgramData _ l) -> return ((),ProgramData False (x:l))
 
-removeItem :: Maybe Int -> StateT TodoList IO ()
+removeItem :: Maybe Int -> ProgramState
 removeItem Nothing  = lift $ putStrLn "Invalid index entered"
-removeItem (Just n) = modify (removeAt n)
+removeItem (Just n) = StateT $ \(ProgramData _ l) -> return ((),ProgramData False (removeAt n l))
 
 removeAt :: Int -> [a] -> [a]
 removeAt _ [] = []
