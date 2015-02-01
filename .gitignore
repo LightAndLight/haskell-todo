@@ -53,3 +53,4 @@ Temporary Items
 # Haskell build artifacts
 dist/
 *.save0
+*.json
