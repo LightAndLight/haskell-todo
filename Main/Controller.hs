@@ -23,7 +23,7 @@ parseChoice choice =
         ["remove", index]      -> removeItem $ parseInt index
         ["save", file]         -> saveList file
         ["load", file]         -> loadList file
-        ["quit"]               -> lift exitSuccess
+        ["quit"]               -> quit 
         (invalid:_)            -> invalidChoice invalid
 
 invalidChoice :: Text -> ProgramState
@@ -31,6 +31,17 @@ invalidChoice cmd = StateT invalid
 	where invalid = \ps -> do
 		putStrLn $ append cmd " is an invalid command."
 		return ((),ps)
+
+quit :: ProgramState
+quit = StateT $ \(ProgramData s l) -> if s 
+    then exitSuccess
+    else do
+        putStrLn "Current list is unsaved. Quit without saving? (y/n)"
+        choice <- getLine
+        case choice of
+            "y" -> exitSuccess
+            "n" -> return ((),ProgramData s l)
+            _   -> runStateT quit $ ProgramData s l
 
 parseInt :: Text -> Maybe Int
 parseInt tx = case decimal tx of
