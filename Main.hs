@@ -13,6 +13,4 @@ program = do
     printList
     program
 
-
-
 main = runStateT program $ ProgramData False []
