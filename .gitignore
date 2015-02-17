@@ -54,3 +54,4 @@ Temporary Items
 dist/
 *.save0
 *.json
+*.swp
