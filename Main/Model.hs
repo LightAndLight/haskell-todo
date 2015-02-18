@@ -53,7 +53,7 @@ loadList :: Text -> ProgramState
 loadList fp = StateT $ \ps -> do
 		contents <- B.readFile . unpack $ fp
 		case (decode contents :: Maybe TodoList) of
-			Just list -> return ((),ProgramData False list)
+			Just list -> return ((),ProgramData True list)
 			Nothing -> S.putStrLn "Syntax Error in JSON file" >> return ((),ps)
 
 saveList :: Text -> ProgramState

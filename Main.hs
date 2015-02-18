@@ -13,4 +13,4 @@ program = do
     printList
     program
 
-main = runStateT program $ ProgramData False []
+main = runStateT program $ ProgramData True []
