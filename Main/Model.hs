@@ -28,12 +28,9 @@ data TodoItem = TodoItem {
 	, message :: Text
 	}
 
-data ProgramData b l = ProgramData {
-    saved :: Bool
-    , list :: TodoList
-    }
+data ProgramData = ProgramData Bool TodoList String
 
-type ProgramState = StateT (ProgramData Bool TodoList) IO ()
+type ProgramState a = StateT ProgramData IO a 
 
 instance FromJSON TodoItem where
 	parseJSON (Object v) = TodoItem <$>
@@ -45,28 +42,29 @@ instance ToJSON TodoItem where
 	toJSON (TodoItem date message) = object ["date" .= date,
 						"message" .= message]
 
-instance Show TodoItem where
-	show (TodoItem d m) = "Date: " ++ unpack d 
-		++ "\t\t\tMessage: " ++ unpack m
-
-loadList :: Text -> ProgramState
+loadList :: Text -> ProgramState ()
 loadList fp = StateT $ \ps -> do
 		contents <- B.readFile . unpack $ fp
 		case (decode contents :: Maybe TodoList) of
-			Just list -> return ((),ProgramData True list)
+			Just list -> return ((),ProgramData True list (unpack fp))
 			Nothing -> S.putStrLn "Syntax Error in JSON file" >> return ((),ps)
 
-saveList :: Text -> ProgramState
-saveList fp = StateT $ \(ProgramData _ l) -> do
-		B.writeFile (unpack fp) . encode $ l
-		return ((),ProgramData True l)
+saveList :: Text -> ProgramState ()
+saveList "" = StateT $ \(ProgramData _ l fp) -> do
+		B.writeFile fp . encode $ l
+		return ((),ProgramData True l fp)
 
-addItem :: TodoItem -> ProgramState
-addItem x = StateT $ \(ProgramData _ l) -> return ((),ProgramData False (x:l))
+saveList fp = StateT $ \(ProgramData _ l _) -> do
+		B.writeFile fps . encode $ l
+		return ((),ProgramData True l fps)
+        where fps = unpack fp 
 
-removeItem :: Maybe Int -> ProgramState
+addItem :: TodoItem -> ProgramState ()
+addItem x = StateT $ \(ProgramData _ l fp) -> return ((),ProgramData False (x:l) fp)
+
+removeItem :: Maybe Int -> ProgramState ()
 removeItem Nothing  = lift $ putStrLn "Invalid index entered"
-removeItem (Just n) = StateT $ \(ProgramData _ l) -> return ((),ProgramData False (removeAt n l))
+removeItem (Just n) = StateT $ \(ProgramData _ l fp) -> return ((),ProgramData False (removeAt n l) fp)
 
 removeAt :: Int -> [a] -> [a]
 removeAt _ [] = []
