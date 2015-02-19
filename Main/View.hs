@@ -1,20 +1,18 @@
-module Main.View(printList) where
+module Main.View where
 
 import Main.Model
-import Control.Monad.State.Lazy
 import System.IO
 import Data.Text(unpack)
 
 instance Show ProgramData where
-    show (ProgramData s l fp) = 
-        "\nFile: " ++ fp ++ (if s then "" else "*") ++ "\n\n"
-        ++ (foldl (\acc x -> acc ++ show x) "" l)
+    show pd =   
+        case pd of
+            ProgramData s l fp Nothing -> "\nFile: " ++ fp 
+                ++ (if s then "" else "*") ++ "\n\n"
+                ++ (foldl (\acc x -> acc ++ show x) "" l)
+
+            ProgramData _ _ _ (Just error) -> "ERROR: " ++ error
 
 instance Show TodoItem where
 	show (TodoItem d m) = "Date: " ++ unpack d 
 		++ "\t\t\tMessage: " ++ unpack m ++ "\n"
-
-printList :: ProgramState ()
-printList = StateT $ \ps -> do
-    print ps
-    return ((),ps) 
