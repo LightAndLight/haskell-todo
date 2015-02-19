@@ -4,13 +4,20 @@ import Main.Model
 import Main.View
 import Main.Controller
 
-import Control.Monad.State
+program :: ProgramData -> IO ProgramData
+program pd = do
+    putStrLn "Command: "
+    command <- getLine
+    pd' <- runCommand command pd
+    print pd'
+    program pd'
 
-program :: ProgramState ()
-program = do
-    choice <- requestChoice
-    parseChoice choice
-    printList
-    program
+initial :: ProgramData
+initial = ProgramData { 
+    saved = True 
+    , list = []
+    , filepath = ""
+    , errorMsg = Nothing
+}
 
-main = runStateT program $ ProgramData True [] ""
+main = program initial
