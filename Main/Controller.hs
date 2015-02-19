@@ -10,13 +10,13 @@ import Data.Text.IO (getLine,putStrLn)
 import Data.Text.Read (decimal)
 import System.Exit (exitSuccess)
 
-requestChoice :: StateT (ProgramData Bool TodoList) IO Text
-requestChoice = StateT $ \xs -> do 
+requestChoice :: ProgramState Text
+requestChoice = StateT $ \ps -> do 
 	putStrLn ("Enter command") 
 	line <- getLine
-	return (line,xs)
+	return (line,ps)
 
-parseChoice :: Text -> ProgramState
+parseChoice :: Text -> ProgramState ()
 parseChoice choice =
     let (command,arguments) = splitAtFirst ' ' choice
         (arg1,rest) = splitAtFirst ' ' arguments
@@ -29,21 +29,21 @@ parseChoice choice =
         "quit"      -> quit 
         _ -> invalidChoice command
 
-invalidChoice :: Text -> ProgramState
+invalidChoice :: Text -> ProgramState ()
 invalidChoice cmd = StateT $ \ps -> do
 		putStrLn $ append cmd " is an invalid command."
 		return ((),ps)
 
-quit :: ProgramState
-quit = StateT $ \(ProgramData s l) -> if s 
+quit :: ProgramState ()
+quit = StateT $ \(ProgramData s l fp) -> if s
     then exitSuccess
     else do
         putStrLn "Current list is unsaved. Quit without saving? (y/n)"
         choice <- getLine
         case choice of
             "y" -> exitSuccess
-            "n" -> return ((),ProgramData s l)
-            _   -> runStateT quit $ ProgramData s l
+            "n" -> return ((),ProgramData s l fp)
+            _   -> runStateT quit $ ProgramData s l fp
 
 parseInt :: Text -> Maybe Int
 parseInt tx = case decimal tx of
