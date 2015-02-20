@@ -1,13 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main.Controller(runCommand) where
+module Main.Controller(
+    getCommand
+    , runCommand
+) where
 
 import Main.Model
 import Control.Applicative ((<$>),(<*>))
 import Control.Monad.State.Lazy
 import Data.Aeson
-import Data.ByteString.Lazy as B (ByteString, readFile, writeFile)
-import Data.Text (pack)
+import qualified Data.ByteString.Lazy as B
+import Data.Char
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import Data.Text (Text)
 import Data.Text.Read (decimal)
 import System.Exit (exitSuccess)
 
@@ -21,65 +27,86 @@ instance ToJSON TodoItem where
 	toJSON (TodoItem date message) = object ["date" .= date,
 						"message" .= message]
 
-runCommand :: String -> ProgramData -> IO ProgramData
-runCommand cmd pd =
-    let (command,arguments) = splitAtFirst ' ' cmd
-        (arg1,rest) = splitAtFirst ' ' arguments
-        parg1 = pack arg1
-        prest = pack rest
+data Command = 
+    Add TodoItem
+    | Remove Int
+    | Save
+    | SaveTo FilePath
+    | Load
+    | LoadFrom FilePath
+    | Quit 
+
+splitWord :: Text -> (Text,Text)
+splitWord w = (first,T.stripStart rest)
+    where (first,rest) = T.break isSpace w
+
+parseCommand :: Text -> Either String Command
+parseCommand s = 
+    let (command,arguments) = splitWord s
+        (arg1,rest) = splitWord arguments
     in
     case command of
-        "add"       -> return $ addItem (TodoItem parg1 prest) pd
-        "remove"    -> return $ removeItem (parseInt arg1) pd
-        "save"      -> saveList arg1 pd
-        "load"      -> loadList arg1 pd
-        "quit"      -> quit  pd
-        _           -> return $ invalidChoice command pd
+        "add"    -> Right . Add $ TodoItem arg1 rest
+        "remove" -> case decimal arg1 of
+                        Right (n,"") -> Right $ Remove n
+                        Left e       -> Left e
+                        _            -> Left "Invalid index"
+        "save"   -> case arg1 of
+                        "" -> Right Save
+                        _  -> Right . SaveTo . T.unpack $ arg1
+        "load"   -> Right . LoadFrom . T.unpack $ arg1 
+        "quit"   -> Right Quit
+        _        -> Left $ T.unpack command ++ " is an invalid command."
 
-invalidChoice :: String -> ProgramData -> ProgramData
-invalidChoice cmd pd = pd { errorMsg = Just (cmd ++ "is an invalid command") }
+getCommand :: IO Command
+getCommand = do
+    putStrLn "Enter command:"
+    input <- T.getLine
+    case parseCommand input of
+        Right command -> return command
+        Left error    -> do putStrLn error
+                            getCommand
 
-loadList :: String -> ProgramData -> IO ProgramData
-loadList fp pd = do
+runCommand :: Command -> ProgramState -> IO ProgramState
+runCommand cmd ps =
+    case cmd of
+        Add item         -> return . modifyList (item:) $ ps { saved = False }
+
+        Remove n         -> return . modifyList (removeAt n) $ ps { saved = False }
+
+        Save             -> do
+            saveTo (filepath ps) (list ps)
+            return $ ps { saved = True }
+
+        SaveTo fp        -> do
+            saveTo fp (list ps)
+            return $ ps { saved = True, filepath = fp }
+
+        LoadFrom fp      -> do
+            result <- loadFrom fp
+            case result of
+                Right l -> return $ ps { saved = True, list = l, filepath = fp }
+                Left e  -> do
+                    putStrLn e
+                    return ps
+
+        Quit | saved ps  -> exitSuccess
+             | otherwise -> do
+                putStrLn "Are you sure you want to quit without saving? (y/n)"
+                (first:_) <- getLine
+                case toLower first of
+                    'y' -> exitSuccess
+                    'n' -> return ps
+                    _   -> do
+                        putStrLn "Enter y or n"
+                        runCommand Quit ps
+
+loadFrom :: FilePath -> IO (Either String TodoList)
+loadFrom fp = do
     contents <- B.readFile fp
     return $ case (decode contents :: Maybe TodoList) of
-        Just list   -> ProgramData True list fp Nothing
-        Nothing     -> pd { errorMsg = Just "Parse error in JSON file" }
-
-saveList :: String -> ProgramData -> IO ProgramData
-saveList "" pd = do
-    B.writeFile (filepath pd) . encode $ list pd
-    return $ pd { 
-        saved = True
-        , errorMsg = Nothing
-    }
-
-saveList fp pd = do 
-    B.writeFile fp . encode $ list pd
-    return $ pd { 
-        saved = True 
-        , filepath = fp
-        , errorMsg = Nothing
-    }
-
-quit :: ProgramData -> IO ProgramData
-quit pd = if saved pd
-    then exitSuccess
-    else do
-        putStrLn "Current list is unsaved. Quit without saving? (y/n)"
-        choice <- getLine
-        case choice of
-            "y" -> exitSuccess
-            "n" -> return pd
-            _   -> quit pd
-
-parseInt :: String -> Int
-parseInt tx = case decimal ptx of
-	Left _ -> -1
-	Right (n,xs) -> if xs == "" then n else -1
-    where ptx = pack tx
-
-splitAtFirst :: Char -> String -> (String,String)
-splitAtFirst c xs = (first,rest)
-    where first = takeWhile (/=c) xs
-          rest = drop (length first + 1) xs
+        Just l   -> Right l
+        Nothing  -> Left "Syntax error in JSON file"
+ 
+saveTo :: FilePath -> TodoList -> IO ()
+saveTo fp l = B.writeFile fp . encode $ l
