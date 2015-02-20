@@ -1,9 +1,9 @@
 module Main.Model(
-    ProgramData(..)
+    ProgramState(..)
 	, TodoList(..)
 	, TodoItem(..)
-	, addItem
-	, removeItem
+	, modifyList
+    , removeAt
 	) where
 
 import Data.Text (Text)
@@ -15,28 +15,14 @@ data TodoItem = TodoItem {
 
 type TodoList = [TodoItem]
 
-data ProgramData = ProgramData {
+data ProgramState = ProgramState {
     saved :: Bool 
     , list :: TodoList 
     , filepath :: String
-    , errorMsg :: Maybe String
 }
 
-addItem :: TodoItem -> ProgramData -> ProgramData
-addItem tdi pd = pd { 
-    saved = False
-    , list = tdi:(list pd)
-    , errorMsg = Nothing
-}
-
-removeItem :: Int -> ProgramData -> ProgramData
-removeItem n pd 
-    | n < 0 = pd { errorMsg = Just "Invalid index" }
-    | otherwise = pd { 
-        saved = False 
-        , list = removeAt n (list pd)
-        , errorMsg = Nothing
-    }
+modifyList :: (TodoList -> TodoList) -> ProgramState -> ProgramState
+modifyList f ps = ps { list = f (list ps) }
 
 removeAt :: Int -> [a] -> [a]
 removeAt _ [] = []
