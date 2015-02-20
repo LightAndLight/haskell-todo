@@ -6,8 +6,10 @@ module Main.Controller(
 ) where
 
 import Main.Model
+import Util.Date
+
 import Control.Applicative ((<$>),(<*>))
-import Control.Monad.State.Lazy
+import Control.Monad (mzero)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Data.Char
@@ -24,8 +26,14 @@ instance FromJSON TodoItem where
 	parseJSON _ = mzero
 
 instance ToJSON TodoItem where
-	toJSON (TodoItem date message) = object ["date" .= date,
-						"message" .= message]
+	toJSON (TodoItem date message) = object [ "date" .= date, "message" .= message ]
+
+instance FromJSON Date where
+	parseJSON (Object v) = Date <$> v .: "year" <*> v .: "month" <*> v .: "day"
+	parseJSON _ = mzero
+
+instance ToJSON Date where
+	toJSON (Date year month day) = object [ "year" .= year, "month" .= month, "day" .= day ]
 
 data Command = 
     Add TodoItem
@@ -46,7 +54,9 @@ parseCommand s =
         (arg1,rest) = splitWord arguments
     in
     case command of
-        "add"    -> Right . Add $ TodoItem arg1 rest
+        "add"    -> case parseDate (T.unpack arg1) of
+                        Right date -> Right . Add $ TodoItem date rest
+                        Left e     -> Left e
         "remove" -> case decimal arg1 of
                         Right (n,"") -> Right $ Remove n
                         Left e       -> Left e
