@@ -1,7 +1,6 @@
 module Main where
 
 import Main.Model
-import Main.View
 import Main.Controller
 
 program :: ProgramState -> IO ProgramState
