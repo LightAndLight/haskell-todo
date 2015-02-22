@@ -29,8 +29,8 @@ data ProgramState = ProgramState {
 }
 
 instance Show ProgramState where
-    show ps = "\nFile: " ++ (filepath ps) 
-        ++ (if saved ps then "" else "*") ++ "\n\n"
+    show ps = "\nFile: " ++ filepath ps
+        ++ (if saved ps then "" else "*") ++ "\n\n" 
         ++ printTodos ps
         where printTodos ps = foldl (\acc x -> acc ++ show x) "" $ list ps
 
@@ -39,4 +39,4 @@ modifyList f ps = ps { list = f (list ps) }
 
 removeAt :: Int -> [a] -> [a]
 removeAt _ [] = []
-removeAt n xs = (take n xs) ++ (drop (n + 1) xs)
+removeAt n xs = take n xs ++ drop (n + 1) xs
