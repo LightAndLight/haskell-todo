@@ -20,20 +20,20 @@ import Data.Text.Read (decimal)
 import System.Exit (exitSuccess)
 
 instance FromJSON TodoItem where
-	parseJSON (Object v) = TodoItem <$>
-		v .: "date" <*>
-		v .: "message"
-	parseJSON _ = mzero
+    parseJSON (Object v) = TodoItem <$>
+        v .: "date" <*>
+        v .: "message"
+    parseJSON _ = mzero
 
 instance ToJSON TodoItem where
-	toJSON (TodoItem date message) = object [ "date" .= date, "message" .= message ]
+    toJSON (TodoItem date message) = object [ "date" .= date, "message" .= message ]
 
 instance FromJSON Date where
-	parseJSON (Object v) = Date <$> v .: "year" <*> v .: "month" <*> v .: "day"
-	parseJSON _ = mzero
+    parseJSON (Object v) = Date <$> v .: "year" <*> v .: "month" <*> v .: "day"
+    parseJSON _ = mzero
 
 instance ToJSON Date where
-	toJSON (Date year month day) = object [ "year" .= year, "month" .= month, "day" .= day ]
+    toJSON (Date year month day) = object [ "year" .= year, "month" .= month, "day" .= day ]
 
 data Command = 
     Add TodoItem
@@ -66,7 +66,14 @@ parseCommand s =
                         _  -> Right . SaveTo . T.unpack $ arg1
         "load"   -> Right . LoadFrom . T.unpack $ arg1 
         "quit"   -> Right Quit
-        _        -> Left $ T.unpack command ++ " is an invalid command."
+        _        -> Left $ '\n' : T.unpack command ++ " is an invalid command.\n\n"
+                    ++ "Valid commands are:\n"
+                    ++ "add [YYYY-MM-DD] [message]\n"
+                    ++ "remove [index]\n"
+                    ++ "save\n"
+                    ++ "save [filename]\n"
+                    ++ "load [filename]\n"
+                    ++ "quit\n"
 
 getCommand :: IO Command
 getCommand = do
