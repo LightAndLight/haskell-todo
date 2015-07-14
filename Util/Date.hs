@@ -37,5 +37,5 @@ parseDate :: String -> Either String Date
 parseDate xs =
     case parse pDate "Date" xs of
         Right (y,m,d) -> Right $ Date (read y) (read m) (read d)
-        Left _        -> Left "Invalid date format"
+        Left _        -> Left "Invalid date format. Date must be in the format YYYY-MM-DD"
 
