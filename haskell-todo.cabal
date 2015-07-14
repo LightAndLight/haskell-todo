@@ -10,16 +10,13 @@ name:                haskell-todo
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.3.0.0
+version:             0.3.0.1
 
 -- A short (one-line) description of the package.
 synopsis:            Command line todo-list
 
 -- A longer description of the package.
 -- description:         
-
--- URL for the project homepage or repository.
-homepage:            github.com/LightAndLight/haskell-todo
 
 -- The license under which the package is released.
 -- license:             
@@ -28,7 +25,7 @@ homepage:            github.com/LightAndLight/haskell-todo
 license-file:        LICENSE
 
 -- The package author(s).
-author:              Isaac E
+author:              Isaac Elliott
 
 -- An email address to which users can send suggestions, bug reports, and 
 -- patches.
@@ -60,8 +57,7 @@ executable haskell-todo
   other-extensions:    OverloadedStrings
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.7 && <4.8, mtl >=2.1 && <2.2, transformers >=0.3 && <0.4, aeson >=0.8 && <0.9, bytestring >=0.10 && <0.11, text >=1.2 && <1.3,
-                       parsec >=3.1 && <3.2
+  build-depends:       base >=4.8 && <4.9, parsec >=3.1 && <3.2, text >=1.2 && <1.3, aeson >=0.9 && <0.10, bytestring >=0.10 && <0.11
   
   -- Directories containing source files.
   -- hs-source-dirs:      
